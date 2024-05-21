@@ -18,3 +18,8 @@ model Message {
   message   String
   dateTime  DateTime @default(now())
 }
+model ClientTotal {
+  id       Int     @id @default(autoincrement())
+  total    Int
+  updatedAt DateTime @updatedAt
+}

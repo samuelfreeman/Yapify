@@ -1,36 +1,29 @@
-//  setting up express
 const express = require("express");
 const app = express();
 const path = require("path");
-
-const PORT = process.env.PORT || 4000;
-//  setting up listener as a variable
-const server = app.listen(PORT, () => {
-  `server runing on ${PORT}`;
-});
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-//  importing sockect io
+const PORT = process.env.PORT || 4000;
+const server = app.listen(PORT, () => {
+  console.log(`Server running on ${PORT}`);
+});
+
 const io = require("socket.io")(server);
 
-//  serving our html
 app.use(express.static(path.join(__dirname, "public")));
 
-//  creating a new set to store number of sockets connected .
-let socketsConnected = new Set();
-
-//  turning on  connection  and  handling the connection
 io.on("connection", onConnected);
 
 async function onConnected(socket) {
   console.log(socket.id);
 
-  // Add socket to the set
-  socketsConnected.add(socket);
+  // Update the client total in the database
+  await incrementClientsTotal();
 
   // Emit the total number of clients
-  io.emit("clients-total", socketsConnected.size);
+  const clientTotal = await getClientsTotal();
+  io.emit("clients-total", clientTotal);
 
   // Fetch and send all previous messages to the newly connected client
   const messages = await prisma.message.findMany({
@@ -44,10 +37,14 @@ async function onConnected(socket) {
   });
 
   // Handle disconnection
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async () => {
     console.log("Socket disconnected", socket.id);
-    socketsConnected.delete(socket.id);
-    io.emit("clients-total", socketsConnected.size);
+
+    // Update the client total in the database
+    await decrementClientsTotal();
+
+    const clientTotal = await getClientsTotal();
+    io.emit("clients-total", clientTotal);
   });
 
   // Handle incoming messages
@@ -67,6 +64,35 @@ async function onConnected(socket) {
   socket.on("feedback", (data) => {
     socket.broadcast.emit("feedback", data);
   });
+}
+
+async function getClientsTotal() {
+  const clientTotal = await prisma.clientTotal.findFirst();
+  return clientTotal ? clientTotal.total : 0;
+}
+
+async function incrementClientsTotal() {
+  const clientTotal = await prisma.clientTotal.findFirst();
+  if (clientTotal) {
+    await prisma.clientTotal.update({
+      where: { id: clientTotal.id },
+      data: { total: clientTotal.total + 1 },
+    });
+  } else {
+    await prisma.clientTotal.create({
+      data: { total: 1 },
+    });
+  }
+}
+
+async function decrementClientsTotal() {
+  const clientTotal = await prisma.clientTotal.findFirst();
+  if (clientTotal && clientTotal.total > 0) {
+    await prisma.clientTotal.update({
+      where: { id: clientTotal.id },
+      data: { total: clientTotal.total - 1 },
+    });
+  }
 }
 
 process.on("SIGINT", async () => {
