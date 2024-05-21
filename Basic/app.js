@@ -4,13 +4,12 @@ const app = express();
 const path = require("path");
 
 const PORT = process.env.PORT || 4000;
-//  setting up listener as a variable 
+//  setting up listener as a variable
 const server = app.listen(PORT, () => {
   `server runing on ${PORT}`;
 });
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-
 
 //  importing sockect io
 const io = require("socket.io")(server);
@@ -20,7 +19,6 @@ app.use(express.static(path.join(__dirname, "public")));
 
 //  creating a new set to store number of sockets connected .
 let socketsConnected = new Set();
-
 
 //  turning on  connection  and  handling the connection
 io.on("connection", onConnected);
@@ -37,7 +35,7 @@ async function onConnected(socket) {
   // Fetch and send all previous messages to the newly connected client
   const messages = await prisma.message.findMany({
     orderBy: {
-      dateTime: 'asc',
+      dateTime: "asc",
     },
   });
 
@@ -71,9 +69,7 @@ async function onConnected(socket) {
   });
 }
 
-
-process.on('SIGINT', async () => {
+process.on("SIGINT", async () => {
   await prisma.$disconnect();
   process.exit(0);
 });
-
