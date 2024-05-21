@@ -1,13 +1,16 @@
+// connecting to socket io
 const socket = io("");
 
+
+//  getting the elements : { Total client ,Message Container, Name Input , Message Input ,Message Form }
 const clientsTotal = document.getElementById("client-total");
 const messageContainer = document.getElementById("message-container");
 const nameInput = document.getElementById("name-input");
 const messageInput = document.getElementById("message-input");
 const messageForm = document.getElementById("message-form");
-
+//  importing an audio 
 const messageTone = new Audio('./message-tone.mp3')
-
+//  adding an eventlistener to  submit  messages
 messageForm.addEventListener("submit", (e) => {
   e.preventDefault();
   sendMessage();
@@ -21,19 +24,21 @@ function sendMessage() {
   if (messageInput.value === "") {
     return;
   }
-
-  console.log(messageInput.value);
+  //  arranging the messages
   const data = {
     name: nameInput.value,
     message: messageInput.value,
     dateTime: new Date(),
   };
+  //  emmiting the message  with data to the server 
   socket.emit("message", data);
+
   addMessageToUI(true, data);
   messageInput.value = "";
   messageTone.play()
 }
 
+//  hancling chat-message 
 socket.on("chat-message", (data) => {
   messageTone.play()
   addMessageToUI(false, data);

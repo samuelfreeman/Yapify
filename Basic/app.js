@@ -8,6 +8,9 @@ const PORT = process.env.PORT || 4000;
 const server = app.listen(PORT, () => {
   `server runing on ${PORT}`;
 });
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
 
 //  importing sockect io
 const io = require("socket.io")(server);
@@ -22,28 +25,55 @@ let socketsConnected = new Set();
 //  turning on  connection  and  handling the connection
 io.on("connection", onConnected);
 
-function onConnected(socket) {
+async function onConnected(socket) {
   console.log(socket.id);
-//  adding socket to the set 
+
+  // Add socket to the set
   socketsConnected.add(socket);
-//  emmiting the size of the connected users
+
+  // Emit the total number of clients
   io.emit("clients-total", socketsConnected.size);
-//  handling a disconnect 
+
+  // Fetch and send all previous messages to the newly connected client
+  const messages = await prisma.message.findMany({
+    orderBy: {
+      dateTime: 'asc',
+    },
+  });
+
+  messages.forEach((message) => {
+    socket.emit("chat-message", message);
+  });
+
+  // Handle disconnection
   socket.on("disconnect", () => {
     console.log("Socket disconnected", socket.id);
-  //  removing the socket id from the set 
     socketsConnected.delete(socket.id);
-    // emitting the socket size 
     io.emit("clients-total", socketsConnected.size);
   });
-  //  handling messages
-  socket.on("message", (data) => {
-    //  broadcasting message data
+
+  // Handle incoming messages
+  socket.on("message", async (data) => {
+    const message = await prisma.message.create({
+      data: {
+        name: data.name,
+        message: data.message,
+        dateTime: data.dateTime,
+      },
+    });
     socket.broadcast.emit("chat-message", data);
     console.log(data);
   });
-  //  broad casting replies also know as feedback
+
+  // Handle feedback
   socket.on("feedback", (data) => {
     socket.broadcast.emit("feedback", data);
   });
 }
+
+
+process.on('SIGINT', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
