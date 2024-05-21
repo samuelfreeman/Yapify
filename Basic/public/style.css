@@ -201,4 +201,17 @@ body {
     .clients-total {
         font-size: 16px;
     }
+    .send-button {
+        height: 48px;
+        font-size: 16px;
+        border: none;
+        outline: none;
+        background-color: #fff;
+        cursor: pointer;
+        padding: 0px 20px;
+        border-radius: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 }
